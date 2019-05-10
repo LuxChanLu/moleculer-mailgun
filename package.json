@@ -1,0 +1,51 @@
+{
+  "name": "moleculer-mailgun",
+  "version": "0.0.1",
+  "description": "Moleculer service for mailgun SMTP provider",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "ci": "jest --watch",
+    "test": "jest --coverage",
+    "lint": "eslint --ext=.js src test index.js",
+    "coverall": "cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YourSoftRun/moleculer-mailgun.git"
+  },
+  "keywords": [
+    "moleculer",
+    "smtp",
+    "mailgun"
+  ],
+  "author": "Hugo Meyronneinc <hugo@yoursoft.run>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/YourSoftRun/moleculer-mailgun/issues"
+  },
+  "homepage": "https://github.com/YourSoftRun/moleculer-mailgun#readme",
+  "jest": {
+    "testEnvironment": "node",
+    "coveragePathIgnorePatterns": [
+      "/node_modules/"
+    ]
+  },
+  "engines": {
+    "node": ">= 8.x.x"
+  },
+  "dependencies": {
+    "mailgun-js": "^0.22.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^24.0.12",
+    "coveralls": "^3.0.3",
+    "eslint": "^5.16.0",
+    "eslint-plugin-jest": "^22.5.1",
+    "jest": "^24.8.0",
+    "jest-cli": "^24.8.0",
+    "moleculer": "^0.13.9"
+  }
+}

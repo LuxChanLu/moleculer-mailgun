@@ -45,8 +45,8 @@ module.exports = {
     mailgun: {
       /** @type {String} Mailgun apiKey (https://app.mailgun.com/app/dashboard). */
       apiKey: '',
-      /** @type {String} Mailgun region (Default US). */
-      region: regions.US,
+      /** @type {String} Mailgun region : US/EU (Default US). */
+      region: MailgunMixin.regions.US,
       /** @type {String} Mailgun domain (Can be override by action meta). */
       domain: '',
       /** @type {Object?} Additional options for mailgun contructor */
@@ -57,12 +57,11 @@ module.exports = {
       defaults: { },
       /** @type {Object?} Webhooks handler (Placeholder {event} for event type) */
       webhooks: {
-        /** @type {String?} Action to call */
+        /** @type {String?} Action to call after webhooks validated */
         action: undefined,
-        /** @type {String?} Event to emit */
+        /** @type {String?} Event to emit after webhooks validated */
         event: undefined
-      },
-    }
+      }
   },
 
   /**

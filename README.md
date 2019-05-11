@@ -2,8 +2,8 @@
 
 [![Build Status](https://travis-ci.org/YourSoftRun/moleculer-mailgun.svg?branch=master)](https://travis-ci.org/YourSoftRun/moleculer-mailgun)
 [![Coverage Status](https://coveralls.io/repos/github/YourSoftRun/moleculer-mailgun/badge.svg?branch=master)](https://coveralls.io/github/YourSoftRun/moleculer-mailgun?branch=master)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/3c0014c55eaa4c1cbf995d7befeb8a14)](https://www.codacy.com/app/Hugome/moleculer-mailgun?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=YourSoftRun/moleculer-mailgun&amp;utm_campaign=Badge_Grade)
-[![Maintainability](https://api.codeclimate.com/v1/badges/20b478c63bda641cca99/maintainability)](https://codeclimate.com/github/YourSoftRun/moleculer-mailgun/maintainability)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/0de33278dbe44f18966a2e9fa429fb69)](https://www.codacy.com/app/Hugome/moleculer-mailgun?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=YourSoftRun/moleculer-mailgun&amp;utm_campaign=Badge_Grade)
+[![Maintainability](https://api.codeclimate.com/v1/badges/18d0be3409e2d85d419e/maintainability)](https://codeclimate.com/github/YourSoftRun/moleculer-mailgun/maintainability)
 [![David](https://img.shields.io/david/YourSoftRun/moleculer-mailgun.svg)](https://david-dm.org/YourSoftRun/moleculer-mailgun)
 [![Known Vulnerabilities](https://snyk.io/test/github/YourSoftRun/moleculer-mailgun/badge.svg)](https://snyk.io/test/github/YourSoftRun/moleculer-mailgun)
 
@@ -11,95 +11,34 @@
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FYourSoftRun%2Fmoleculer-mailgun.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FYourSoftRun%2Fmoleculer-mailgun?ref=badge_shield)
 
 ## How to use it
-### Worker (Service with your jobes)
+
 ```js
-const { WorkerMixin } = require('moleculer-mailgun')
+const MailgunMixin = require('moleculer-mailgun')
 
 module.exports = {
-  name: 'images',
-  mixins: [WorkerMixin],
+  name: 'mailgun',
+  mixins: [MailgunMixin],
   settings: {
-    faktory: {
-      /** @type {String} Faktory url (tcp://:passqueue@localhost:7419/) also FAKTORY_URL can be use. */
-      url: 'tcp://:passqueue@localhost:7419',
-      /** @type {Object?} Additional options for `new Worker()` */
-      options: {
-        concurrency: 5,
-        queues: ['default'],
-        timeout: 25 * 1000
-      },
-      /** @type {Array?} Middlewares for faktory */
-      middlewares: [],
-      /** @type {Boolean?} Enable hooks middleware */
-      hooks: true
-    }
-  },
-  jobs: {
-    async resize(image, size) {
-      // Do the magic here !
-    }
-  }
-}
-```
-### Client (Service launching jobs)
-```js
-const { ClientMixin } = require('moleculer-mailgun')
-
-module.exports = {
-  mixins: [ClientMixin],
-  settings: {
-    faktory: {
-      /** @type {String} Faktory url (tcp://:passqueue@localhost:7419/) also FAKTORY_URL can be use. */
-      url: 'tcp://:passqueue@localhost:7419',
-      /** @type {Object?} Additional options for `new Client()` */
-      options: {
-        labels: ['test'],
+    mailgun: {
+      /** @type {String} Mailgun apiKey (https://app.mailgun.com/app/dashboard). */
+      apiKey: '',
+      /** @type {String} Mailgun region : US/EU (Default US). */
+      region: MailgunMixin.regions.US,
+      /** @type {String} Mailgun domain (Can be override by action meta). */
+      domain: '',
+      /** @type {Object?} Additional options for mailgun contructor */
+      options: { },
+      /** @type {Number} Max "To" by batch requests (It will chunk list by that, Mailgun limit : 1000) */
+      bySendingBatch: 950,
+      /** @type {Object?} Defaults options for mailgun send mail */
+      defaults: { },
+      /** @type {Object?} Webhooks handler (Placeholder {event} for event type) */
+      webhooks: {
+        /** @type {String?} Action to call after webhooks validated */
+        action: undefined,
+        /** @type {String?} Event to emit after webhooks validated */
+        event: undefined
       }
-    }
-  },
-  actions: {
-    async 'image.upload'(ctx) {
-      await this.queue('images.resize', ctx.params.images, 'large-landscape')
-      return 'In progress...'
-    }
-  }
-}
-```
-You can also use hooks (No native from faktory, middleware in this module : See src/worker.js#71)
-```js
-const { ClientMixin } = require('moleculer-mailgun')
-
-module.exports = {
-  name: 'web',
-  mixins: [ClientMixin],
-  settings: {
-    faktory: {
-      /** @type {String} Faktory url (tcp://:passqueue@localhost:7419/) also FAKTORY_URL can be use. */
-      url: 'tcp://:passqueue@localhost:7419',
-      /** @type {Object?} Additional options for `new Client()` */
-      options: {
-        labels: ['test'],
-      }
-    }
-  },
-  actions: {
-    async 'image.upload'(ctx) {
-      const { image } = ctx.params
-      await this.queue('images.resize', image, 'large-landscape', {
-        hooks: {
-          start: { handler: 'web.image.start' },
-          end: { handler: 'web.image.end', params: { image }, meta: { user: ctx.meta.user } }
-        }
-      })
-      return 'In progress...'
-    },
-    'image.start'() {
-      // Automagicaly send to the client notification ?
-    },
-    'image.end'(ctx) {
-      const { image } = ctx.params
-      const { user } = ctx.meta
-      // Automagicaly send to the client notification ?
     }
   }
 }

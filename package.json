@@ -37,7 +37,9 @@
     "node": ">= 8.x.x"
   },
   "dependencies": {
-    "mailgun-js": "^0.22.0"
+    "chunk": "0.0.2",
+    "mailgun-js": "^0.22.0",
+    "qs": "^6.7.0"
   },
   "devDependencies": {
     "@types/jest": "^24.0.12",

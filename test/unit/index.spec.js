@@ -1,177 +1,104 @@
 const { ServiceBroker } = require('moleculer')
-const WorkerService = require('../../src/worker')
+const QS = require('qs')
+const MailgunMixin = require('../../index')
 
-describe('Faktory worker init', () => {
-  it('should init worker', async () => {
-    const broker = new ServiceBroker({ logger: false })
-    const service = broker.createService({
-      mixins: [WorkerService],
-      settings: {
-        faktory: {
-          url: 'tcp://:password@server:7419',
-        }
-      },
-      jobs: {
-        'test.job'() {}
-      }
-    })
-    expect(service).toBeDefined()
-    expect(service.$worker).toBeDefined()
-    expect(service.$worker.client.connectionFactory.host).toBe('server')
-    expect(service.$worker.client.connectionFactory.port).toBe('7419')
-    expect(service.$worker.client.password).toBe('password')
-    expect(service.$worker.registry['test.job']).toBeDefined()
-  })
-
-  it('should init worker without hooks middleware', async () => {
-    const broker = new ServiceBroker({ logger: false })
-    const service = broker.createService({
-      mixins: [WorkerService],
-      settings: {
-        faktory: {
-          url: 'tcp://:password@server:7419',
-          hooks: false
-        }
-      }
-    })
-    expect(service).toBeDefined()
-    expect(service.$worker).toBeDefined()
-    expect(service.$worker.middleware[1]).toBeUndefined() // Hooks middleware
-  })
-
-  it('should init worker with user middlewares', async () => {
-    const broker = new ServiceBroker({ logger: false })
-    const service = broker.createService({
-      mixins: [WorkerService],
-      settings: {
-        faktory: {
-          url: 'tcp://:password@server:7419',
-          middlewares: [async (_, next) => next()]
-        }
-      }
-    })
-    expect(service).toBeDefined()
-    expect(service.$worker).toBeDefined()
-    expect(service.$worker.middleware[2]).toBeDefined() // Logs + Hooks + User middlware
-  })
-})
-
-describe('Faktory worker lifecycle actions', () => {
+describe('Basic integration', () => {
   const broker = new ServiceBroker({ logger: false })
+  const mailgun = jest.fn()
+  const webhooks = {
+    action: jest.fn(() => true),
+    event: jest.fn()
+  }
   const service = broker.createService({
-    mixins: [WorkerService],
+    name: 'mailgun',
+    mixins: [MailgunMixin],
+    settings: {
+      mailgun: {
+        apiKey: 'examplekey',
+        region: MailgunMixin.regions.EU,
+        options: {
+          testMode: true,
+          testModeLogger: mailgun,
+          mute: true
+        },
+        bySendingBatch: 2,
+        domain: 'example.org',
+        defaults: {
+          from:'Example <test@example.org>'
+        }
+      }
+    },
     actions: {
-      'hooks.test.start'() {},
-      'hooks.test.end'() {}
+      'events.test': ({ params }) => webhooks.action(params)
+    },
+    events: {
+      'mailgun.events.test': payload => webhooks.event(payload)
     }
   })
-  service.$worker.work = jest.fn()
-  service.$worker.stop = jest.fn()
+  const mailgunClientGenerator = service.mailgun
 
   beforeAll(() => broker.start())
-  beforeAll(() => broker.stop())
+  afterAll(() => broker.stop())
 
-  it('should quiet worker', async () => {
-    await expect(broker.call('faktory.is.quiet')).resolves.toBeFalsy()
-    await broker.call('faktory.quiet')
-    await expect(broker.call('faktory.is.quiet')).resolves.toBeTruthy()
+  it('should send mail', async () => {
+    mailgun.mockClear()
+    await expect(broker.call('mailgun.send', { to: 'test@example.org' })).resolves.toBeUndefined()
+    expect(mailgun.mock.calls[0][0]).toMatchObject({ path: '/v3/example.org/messages', auth: 'api:examplekey' })
   })
 
-  it('should stop worker', async () => {
-    await broker.call('faktory.stop')
-    expect(service.$worker.stop).toHaveBeenCalled()
+  it('should get current domain info', async () => {
+    mailgun.mockClear()
+    await expect(broker.call('mailgun.domain')).resolves.toBeUndefined()
+    expect(mailgun.mock.calls[0][0]).toMatchObject({ path: '/v3/domains/example.org' })
   })
 
-  it('should start worker', async () => {
-    await broker.call('faktory.start')
-    expect(service.$worker.work).toHaveBeenCalled()
+  it('should send a batch', async () => {
+    mailgun.mockClear()
+    const to = {
+      'test1@example.org': { firstname: 'Test1', lastname: 'Example' },
+      'test2@example.org': { firstname: 'Test2', lastname: 'Example' },
+      'test3@example.org': { firstname: 'Test3', lastname: 'Example' },
+      'test4@example.org': { firstname: 'Test4', lastname: 'Example' },
+      'test5@example.org': { firstname: 'Test5', lastname: 'Example' },
+      'test6@example.org': { firstname: 'Test6', lastname: 'Example' }
+    }
+    await expect(broker.call('mailgun.batch', { to }, { meta: { domain: 'example.net' } })).resolves.toMatchObject([undefined, undefined, undefined])
+    expect(mailgun.mock.calls[0][0]).toMatchObject({ path: '/v3/example.net/messages' })
+    expect(QS.parse(mailgun.mock.calls[0][1])).toMatchObject({ to: ['test1@example.org', 'test2@example.org'] })
+    expect(QS.parse(mailgun.mock.calls[1][1])).toMatchObject({ to: ['test3@example.org', 'test4@example.org'] })
+    expect(QS.parse(mailgun.mock.calls[2][1])).toMatchObject({ to: ['test5@example.org', 'test6@example.org'] })
   })
 
-  it('should get worker jobs', async () => {
-    await expect(broker.call('faktory.jobs')).resolves.toEqual([])
+  it('should validate email', async () => {
+    mailgun.mockClear()
+    await expect(broker.call('mailgun.validate', { email: 'test@example.org' })).resolves.toBeFalsy()
+    expect(mailgun.mock.calls[0][0]).toMatchObject({ path: `/v3/address/validate?${QS.stringify({ address: 'test@example.org' })}` })
+    service.mailgun = jest.fn(() => ({ validate: () => ({ is_valid: true }) }))
+    await expect(broker.call('mailgun.validate', { email: 'test@example.org' })).resolves.toBeTruthy()
+    service.mailgun = mailgunClientGenerator
   })
 
-  it('should run logger middleware', async () => {
-    const next = jest.fn()
-    service.logger.debug = jest.fn()
-    await service.$worker.middleware[0]({ job: {} }, next)
-    expect(service.logger.debug).toHaveBeenCalledTimes(2)
-    expect(next).toHaveBeenCalled()
-    service.logger.debug.mockRestore()
+  it('should handle webhooks', async () => {
+    mailgun.mockClear()
+    await expect(broker.call('mailgun.webhooks', { signature: {}, 'event-data': { event: 'test' } })).resolves.toBeFalsy()
+    service.validateWebhook = jest.fn(() => true)
+    await expect(broker.call('mailgun.webhooks', { signature: {}, 'event-data': { event: 'test' } })).resolves.toBeTruthy()
+
+    service.settings.mailgun.webhooks.action = 'mailgun.events.{event}'
+    await expect(broker.call('mailgun.webhooks', { signature: {}, 'event-data': { event: 'test' } })).resolves.toBeTruthy()
+    expect(webhooks.action).toHaveBeenCalledWith({ event: 'test' })
+    expect(webhooks.event).not.toHaveBeenCalled()
+
+    webhooks.action.mockClear()
+    webhooks.event.mockClear()
+    service.settings.mailgun.webhooks.action = undefined
+    service.settings.mailgun.webhooks.event = 'mailgun.events.{event}'
+    await expect(broker.call('mailgun.webhooks', { signature: {}, 'event-data': { event: 'test' } })).resolves.toBeTruthy()
+    expect(webhooks.event).toHaveBeenCalledWith({ event: 'test' })
+    expect(webhooks.action).not.toHaveBeenCalled()
+
+    service.settings.mailgun.webhooks.action = undefined
+    service.settings.mailgun.webhooks.event = undefined
+    service.validateWebhook.mockRestore()
   })
-
-  describe('Hooks', () => {
-    it('should call start hooks', async () => {
-      const next = jest.fn()
-      const job = {
-        jobtype: 'job.test',
-        args: [
-          42,
-          {
-            start: { handler: 'faktory.hooks.test.start', params: { test: true } }
-          }
-        ]
-      }
-      broker.emit = jest.fn()
-      broker.call = jest.fn()
-      await service.$worker.middleware[1]({ job }, next)
-      expect(next).toHaveBeenCalled()
-      expect(broker.emit).toHaveBeenCalledWith('faktory.jobs.job.test.start', job)
-      expect(broker.call).toHaveBeenCalledWith('faktory.hooks.test.start', { job, test: true }, undefined)
-    })
-
-    it('should call end hooks', async () => {
-      const next = jest.fn()
-      const job = {
-        jobtype: 'job.test',
-        args: [
-          42,
-          { end: { handler: 'faktory.hooks.test.end' } }
-        ]
-      }
-      broker.emit = jest.fn()
-      broker.call = jest.fn()
-      await service.$worker.middleware[1]({ job }, next)
-      expect(next).toHaveBeenCalled()
-      expect(broker.emit).toHaveBeenCalledWith('faktory.jobs.job.test.end', job)
-      expect(broker.call).toHaveBeenCalledWith('faktory.hooks.test.end', { job }, undefined)
-    })
-
-    it('should call start hooks and block job', async () => {
-      const next = jest.fn()
-      const job = {
-        jobtype: 'job.test',
-        args: [
-          42,
-          {
-            start: { handler: 'faktory.hooks.test.start', params: { test: true }, meta: { zero: 'two' } }
-          }
-        ]
-      }
-      broker.emit = jest.fn()
-      broker.call = jest.fn(() => false)
-      await service.$worker.middleware[1]({ job }, next)
-      expect(next).not.toHaveBeenCalled()
-      expect(broker.emit).toHaveBeenCalledWith('faktory.jobs.job.test.start', job)
-      expect(broker.call).toHaveBeenCalledWith('faktory.hooks.test.start', { job, test: true }, { meta: { zero: 'two' } })
-      expect(broker.emit).not.toHaveBeenCalledWith('faktory.jobs.job.test.end', job)
-      expect(broker.call).not.toHaveBeenCalledWith('faktory.hooks.test.end', { job })
-    })
-
-    it('should not call hooks (No args)', async () => {
-      const next = jest.fn()
-      const job = {
-        jobtype: 'job.test'
-      }
-      broker.emit = jest.fn()
-      broker.call = jest.fn(() => false)
-      await service.$worker.middleware[1]({ job }, next)
-      expect(next).toHaveBeenCalled()
-      expect(broker.emit).toHaveBeenCalledWith('faktory.jobs.job.test.start', job)
-      expect(broker.call).not.toHaveBeenCalledWith('faktory.hooks.test.start', { job, test: true })
-      expect(broker.emit).toHaveBeenCalledWith('faktory.jobs.job.test.end', job)
-      expect(broker.call).not.toHaveBeenCalledWith('faktory.hooks.test.end', { job })
-    })
-  })
-
 })

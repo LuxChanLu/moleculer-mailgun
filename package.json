@@ -38,8 +38,7 @@
   },
   "dependencies": {
     "chunk": "0.0.2",
-    "mailgun-js": "^0.22.0",
-    "qs": "^6.7.0"
+    "mailgun-js": "^0.22.0"
   },
   "devDependencies": {
     "@types/jest": "^24.0.12",
@@ -48,6 +47,7 @@
     "eslint-plugin-jest": "^22.5.1",
     "jest": "^24.8.0",
     "jest-cli": "^24.8.0",
-    "moleculer": "^0.13.9"
+    "moleculer": "^0.13.9",
+    "qs": "^6.7.0"
   }
 }

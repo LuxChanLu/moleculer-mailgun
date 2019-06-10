@@ -72,7 +72,7 @@ module.exports = {
     send: {
       params: { to: 'email' },
       async handler(ctx) {
-        return this.send(ctx, ctx.params)
+        return this.sendMg(ctx, ctx.params)
       }
     },
     domain: {
@@ -90,7 +90,7 @@ module.exports = {
             params['recipient-variables'][key] = vars
             return key
           })
-          results.push(await this.send(ctx, params))
+          results.push(await this.sendMg(ctx, params))
         }
         return results
       }
@@ -138,7 +138,7 @@ module.exports = {
         ...options
       })
     },
-    send(ctx, params) {
+    sendMg(ctx, params) {
       return this.mailgun(ctx).messages().send({ ...this.settings.mailgun.defaults, ...params })
     },
     validateWebhook(ctx, { timestamp, token, signature }) {

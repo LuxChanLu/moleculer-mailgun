@@ -9,6 +9,7 @@ const Mailgun = require('mailgun-js')
 const Chunk = require('chunk')
 
 const BouncesApi = require('./api/bounces.js')
+const CampaignsApi = require('./api/campaigns.js')
 const ComplaintsApi = require('./api/complaints.js')
 const CredentialsApi = require('./api/credentials.js')
 const DomainApi = require('./api/domain.js')
@@ -28,9 +29,9 @@ const regions = {
 
 module.exports = {
   mixins: [
-    BouncesApi, ComplaintsApi, CredentialsApi, DomainApi, EventsApi,
-    ListApi, MessageApi, RoutesApi, StatsApi, TagsApi, TrackingApi,
-    UnsubscribesApi
+    BouncesApi, CampaignsApi, ComplaintsApi, CredentialsApi, DomainApi,
+    EventsApi, ListApi, MessageApi, RoutesApi, StatsApi, TagsApi,
+    TrackingApi, UnsubscribesApi
   ],
   /**
 	 * Mailgun const

@@ -12,7 +12,7 @@ const BouncesApi = require('./api/bounces.js')
 const CampaignsApi = require('./api/campaigns.js')
 const ComplaintsApi = require('./api/complaints.js')
 const CredentialsApi = require('./api/credentials.js')
-const DomainApi = require('./api/domain.js')
+const DomainsApi = require('./api/domains.js')
 const EventsApi = require('./api/events.js')
 const ListApi = require('./api/list.js')
 const MessageApi = require('./api/message.js')
@@ -29,7 +29,7 @@ const regions = {
 
 module.exports = {
   mixins: [
-    BouncesApi, CampaignsApi, ComplaintsApi, CredentialsApi, DomainApi,
+    BouncesApi, CampaignsApi, ComplaintsApi, CredentialsApi, DomainsApi,
     EventsApi, ListApi, MessageApi, RoutesApi, StatsApi, TagsApi,
     TrackingApi, UnsubscribesApi
   ],

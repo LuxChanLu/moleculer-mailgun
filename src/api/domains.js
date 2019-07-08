@@ -77,6 +77,35 @@ module.exports = {
         const { domain, webhook } = ctx.params
         return this.mailgun(ctx).request('DELETE', `/domains/${domain}/webhooks/${webhook}`)
       }
+    },
+
+    'domains.tracking': {
+      params: { domain: 'string' },
+      async handler(ctx) {
+        const { domain } = ctx.params
+        return this.mailgun(ctx).request('GET', `/domains/${domain}/tracking`)
+      }
+    },
+    'domains.tracking.open': {
+      params: { domain: 'string', active: { type: 'enum', values: ['yes', 'no'] } },
+      async handler(ctx) {
+        const { domain, active } = ctx.params
+        return this.mailgun(ctx).request('PUT', `/domains/${domain}/tracking/open`, { active })
+      }
+    },
+    'domains.tracking.click': {
+      params: { domain: 'string', active: { type: 'enum', values: ['yes', 'no', 'htmlonly'] } },
+      async handler(ctx) {
+        const { domain, active } = ctx.params
+        return this.mailgun(ctx).request('PUT', `/domains/${domain}/tracking/click`, { active })
+      }
+    },
+    'domains.tracking.unsubscribe': {
+      params: { domain: 'string', active: 'boolean', html_footer: 'string', text_footer: 'string' },
+      async handler(ctx) {
+        const { domain, active, html_footer, text_footer } = ctx.params
+        return this.mailgun(ctx).request('PUT', `/domains/${domain}/tracking/unsubscribe`, { active, html_footer, text_footer })
+      }
     }
   }
 }

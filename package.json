@@ -1,6 +1,6 @@
 {
   "name": "moleculer-mailgun",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Moleculer service for mailgun SMTP provider",
   "main": "index.js",
   "directories": {
